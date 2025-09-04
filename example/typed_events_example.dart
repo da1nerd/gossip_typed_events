@@ -7,6 +7,7 @@
 /// - Listen for specific event types
 /// - Use validation and metadata
 /// - Handle errors gracefully
+library;
 
 import 'dart:async';
 import 'dart:math';
@@ -18,17 +19,28 @@ import 'package:gossip_typed_events/gossip_typed_events.dart';
 
 /// User authentication event
 class UserLoginEvent extends TypedEvent with TypedEventMixin {
-  final String userId;
-  final String sessionId;
-  final String ipAddress;
-  final DateTime loginTime;
-
   UserLoginEvent({
     required this.userId,
     required this.sessionId,
     required this.ipAddress,
     required this.loginTime,
   });
+
+  factory UserLoginEvent.fromJson(Map<String, dynamic> json) {
+    final event = UserLoginEvent(
+      userId: json['userId'] as String,
+      sessionId: json['sessionId'] as String,
+      ipAddress: json['ipAddress'] as String,
+      loginTime: DateTime.fromMillisecondsSinceEpoch(json['loginTime'] as int),
+    );
+
+    event.fromJsonWithMetadata(json);
+    return event;
+  }
+  final String userId;
+  final String sessionId;
+  final String ipAddress;
+  final DateTime loginTime;
 
   @override
   String get type => 'user_login';
@@ -49,30 +61,12 @@ class UserLoginEvent extends TypedEvent with TypedEventMixin {
         'loginTime': loginTime.millisecondsSinceEpoch,
       };
 
-  factory UserLoginEvent.fromJson(Map<String, dynamic> json) {
-    final event = UserLoginEvent(
-      userId: json['userId'] as String,
-      sessionId: json['sessionId'] as String,
-      ipAddress: json['ipAddress'] as String,
-      loginTime: DateTime.fromMillisecondsSinceEpoch(json['loginTime'] as int),
-    );
-
-    event.fromJsonWithMetadata(json);
-    return event;
-  }
-
   @override
   String toString() => 'UserLoginEvent(userId: $userId, sessionId: $sessionId)';
 }
 
 /// Order creation event
 class OrderCreatedEvent extends TypedEvent with TypedEventMixin {
-  final String orderId;
-  final String customerId;
-  final List<OrderItem> items;
-  final double totalAmount;
-  final String currency;
-
   OrderCreatedEvent({
     required this.orderId,
     required this.customerId,
@@ -80,6 +74,28 @@ class OrderCreatedEvent extends TypedEvent with TypedEventMixin {
     required this.totalAmount,
     required this.currency,
   });
+
+  factory OrderCreatedEvent.fromJson(Map<String, dynamic> json) {
+    final itemsJson = json['items'] as List;
+    final items =
+        itemsJson.cast<Map<String, dynamic>>().map(OrderItem.fromJson).toList();
+
+    final event = OrderCreatedEvent(
+      orderId: json['orderId'] as String,
+      customerId: json['customerId'] as String,
+      items: items,
+      totalAmount: (json['totalAmount'] as num).toDouble(),
+      currency: json['currency'] as String,
+    );
+
+    event.fromJsonWithMetadata(json);
+    return event;
+  }
+  final String orderId;
+  final String customerId;
+  final List<OrderItem> items;
+  final double totalAmount;
+  final String currency;
 
   @override
   String get type => 'order_created';
@@ -103,25 +119,6 @@ class OrderCreatedEvent extends TypedEvent with TypedEventMixin {
         'currency': currency,
       };
 
-  factory OrderCreatedEvent.fromJson(Map<String, dynamic> json) {
-    final itemsJson = json['items'] as List;
-    final items = itemsJson
-        .cast<Map<String, dynamic>>()
-        .map((item) => OrderItem.fromJson(item))
-        .toList();
-
-    final event = OrderCreatedEvent(
-      orderId: json['orderId'] as String,
-      customerId: json['customerId'] as String,
-      items: items,
-      totalAmount: (json['totalAmount'] as num).toDouble(),
-      currency: json['currency'] as String,
-    );
-
-    event.fromJsonWithMetadata(json);
-    return event;
-  }
-
   @override
   String toString() =>
       'OrderCreatedEvent(orderId: $orderId, customerId: $customerId, total: $totalAmount $currency)';
@@ -129,17 +126,24 @@ class OrderCreatedEvent extends TypedEvent with TypedEventMixin {
 
 /// Inventory update event
 class InventoryUpdateEvent extends TypedEvent {
-  final String productId;
-  final int quantityChange;
-  final int newQuantity;
-  final String reason;
-
   InventoryUpdateEvent({
     required this.productId,
     required this.quantityChange,
     required this.newQuantity,
     required this.reason,
   });
+
+  factory InventoryUpdateEvent.fromJson(Map<String, dynamic> json) =>
+      InventoryUpdateEvent(
+        productId: json['productId'] as String,
+        quantityChange: json['quantityChange'] as int,
+        newQuantity: json['newQuantity'] as int,
+        reason: json['reason'] as String,
+      );
+  final String productId;
+  final int quantityChange;
+  final int newQuantity;
+  final String reason;
 
   @override
   String get type => 'inventory_update';
@@ -152,15 +156,6 @@ class InventoryUpdateEvent extends TypedEvent {
         'reason': reason,
       };
 
-  factory InventoryUpdateEvent.fromJson(Map<String, dynamic> json) {
-    return InventoryUpdateEvent(
-      productId: json['productId'] as String,
-      quantityChange: json['quantityChange'] as int,
-      newQuantity: json['newQuantity'] as int,
-      reason: json['reason'] as String,
-    );
-  }
-
   @override
   String toString() =>
       'InventoryUpdateEvent(productId: $productId, change: $quantityChange, new: $newQuantity)';
@@ -168,33 +163,31 @@ class InventoryUpdateEvent extends TypedEvent {
 
 /// Supporting data structures
 class OrderItem {
-  final String productId;
-  final int quantity;
-  final double unitPrice;
-
   OrderItem({
     required this.productId,
     required this.quantity,
     required this.unitPrice,
   });
 
+  factory OrderItem.fromJson(Map<String, dynamic> json) => OrderItem(
+        productId: json['productId'] as String,
+        quantity: json['quantity'] as int,
+        unitPrice: (json['unitPrice'] as num).toDouble(),
+      );
+  final String productId;
+  final int quantity;
+  final double unitPrice;
+
   Map<String, dynamic> toJson() => {
         'productId': productId,
         'quantity': quantity,
         'unitPrice': unitPrice,
       };
-
-  factory OrderItem.fromJson(Map<String, dynamic> json) {
-    return OrderItem(
-      productId: json['productId'] as String,
-      quantity: json['quantity'] as int,
-      unitPrice: (json['unitPrice'] as num).toDouble(),
-    );
-  }
 }
 
 /// Simple in-memory transport for the example
 class InMemoryTransport implements GossipTransport {
+  InMemoryTransport(this.nodeId, this._nodeRegistry);
   final String nodeId;
   final Map<String, InMemoryTransport> _nodeRegistry;
 
@@ -204,8 +197,6 @@ class InMemoryTransport implements GossipTransport {
       StreamController<IncomingEvents>.broadcast();
 
   bool _isInitialized = false;
-
-  InMemoryTransport(this.nodeId, this._nodeRegistry);
 
   @override
   Future<void> initialize() async {
@@ -272,17 +263,14 @@ class InMemoryTransport implements GossipTransport {
   Stream<IncomingEvents> get incomingEvents => _eventsController.stream;
 
   @override
-  Future<List<GossipPeer>> discoverPeers() async {
-    return _nodeRegistry.keys
-        .where((id) => id != nodeId)
-        .map((id) => GossipPeer(id: id, address: 'memory://$id'))
-        .toList();
-  }
+  Future<List<GossipPeer>> discoverPeers() async => _nodeRegistry.keys
+      .where((id) => id != nodeId)
+      .map((id) => GossipPeer(id: id, address: 'memory://$id'))
+      .toList();
 
   @override
-  Future<bool> isPeerReachable(GossipPeer peer) async {
-    return _nodeRegistry.containsKey(peer.id);
-  }
+  Future<bool> isPeerReachable(GossipPeer peer) async =>
+      _nodeRegistry.containsKey(peer.id);
 }
 
 void main() async {
@@ -304,7 +292,7 @@ void main() async {
     _setupEventListeners(nodes);
 
     // Wait for nodes to discover each other
-    await Future.delayed(Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 100));
     await Future.wait(nodes.map((node) => node.discoverPeers()));
 
     print('🔗 Nodes connected and ready\n');
@@ -314,7 +302,7 @@ void main() async {
 
     // Wait for events to propagate
     print('\n⏳ Waiting for event propagation...');
-    await Future.delayed(Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 3));
 
     // Show final statistics
     await _showStatistics(nodes);
@@ -341,17 +329,17 @@ Future<void> _registerEventTypes() async {
 
   registry.register<UserLoginEvent>(
     'user_login',
-    (json) => UserLoginEvent.fromJson(json),
+    UserLoginEvent.fromJson,
   );
 
   registry.register<OrderCreatedEvent>(
     'order_created',
-    (json) => OrderCreatedEvent.fromJson(json),
+    OrderCreatedEvent.fromJson,
   );
 
   registry.register<InventoryUpdateEvent>(
     'inventory_update',
-    (json) => InventoryUpdateEvent.fromJson(json),
+    InventoryUpdateEvent.fromJson,
   );
 
   final stats = registry.getStats();
@@ -367,9 +355,9 @@ Future<List<GossipNode>> _createNodes(
   final nodes = <GossipNode>[];
 
   final nodeConfigs = [
-    ('WebServer', Duration(milliseconds: 500)),
-    ('OrderService', Duration(milliseconds: 600)),
-    ('InventoryService', Duration(milliseconds: 700)),
+    ('WebServer', const Duration(milliseconds: 500)),
+    ('OrderService', const Duration(milliseconds: 600)),
+    ('InventoryService', const Duration(milliseconds: 700)),
   ];
 
   for (final (nodeId, gossipInterval) in nodeConfigs) {
@@ -412,7 +400,7 @@ void _setupEventListeners(List<GossipNode> nodes) {
     // Listen for order events
     node
         .onTypedEvent<OrderCreatedEvent>(
-      (json) => OrderCreatedEvent.fromJson(json),
+      OrderCreatedEvent.fromJson,
     )
         .listen((event) {
       print(
@@ -467,7 +455,7 @@ Future<void> _simulateBusinessActivity(List<GossipNode> nodes) async {
 
   print('🔐 Broadcasting user login event...');
   await webServer.broadcastTypedEvent(loginEvent);
-  await Future.delayed(Duration(milliseconds: 200));
+  await Future.delayed(const Duration(milliseconds: 200));
 
   // 2. Customer creates an order
   final orderEvent = OrderCreatedEvent(
@@ -483,7 +471,7 @@ Future<void> _simulateBusinessActivity(List<GossipNode> nodes) async {
 
   print('🛒 Broadcasting order creation event...');
   await orderService.broadcastTypedEvent(orderEvent);
-  await Future.delayed(Duration(milliseconds: 200));
+  await Future.delayed(const Duration(milliseconds: 200));
 
   // 3. Inventory gets updated (multiple events)
   final inventoryEvents = [
@@ -503,7 +491,7 @@ Future<void> _simulateBusinessActivity(List<GossipNode> nodes) async {
 
   print('📦 Broadcasting inventory updates...');
   await inventoryService.broadcastTypedEvents(inventoryEvents);
-  await Future.delayed(Duration(milliseconds: 200));
+  await Future.delayed(const Duration(milliseconds: 200));
 
   // 4. Batch operation example
   final batchEvents = <TypedEvent>[
@@ -601,7 +589,7 @@ Future<void> _demonstrateStreamTransformers(GossipNode node) async {
   final userEventStream = eventController.stream.transform(
     typedEventTransformer<UserLoginEvent>(
       eventType: 'user_login',
-      factory: (json) => UserLoginEvent.fromJson(json),
+      factory: UserLoginEvent.fromJson,
     ),
   );
 
@@ -624,7 +612,7 @@ Future<void> _demonstrateStreamTransformers(GossipNode node) async {
   });
 
   // Simulate some events through the stream
-  await Future.delayed(Duration(milliseconds: 100));
+  await Future.delayed(const Duration(milliseconds: 100));
 
   // Create a mock typed event wrapped in gossip event format
   final mockLoginEvent = UserLoginEvent(
@@ -649,7 +637,7 @@ Future<void> _demonstrateStreamTransformers(GossipNode node) async {
   eventController.add(wrappedEvent);
 
   // Wait a bit for processing
-  await Future.delayed(Duration(milliseconds: 100));
+  await Future.delayed(const Duration(milliseconds: 100));
 
   // Clean up
   await userSubscription.cancel();

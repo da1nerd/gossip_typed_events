@@ -49,13 +49,12 @@ import 'typed_event.dart';
 /// The registry is thread-safe and can be accessed concurrently from
 /// multiple isolates or async contexts.
 class TypedEventRegistry {
-  static final TypedEventRegistry _instance = TypedEventRegistry._internal();
-
   /// Gets the singleton instance of the registry.
   factory TypedEventRegistry() => _instance;
 
   /// Private constructor for singleton pattern.
   TypedEventRegistry._internal();
+  static final TypedEventRegistry _instance = TypedEventRegistry._internal();
 
   /// Map of type strings to factory functions.
   final Map<String, TypedEvent Function(Map<String, dynamic>)> _factories = {};
@@ -275,30 +274,31 @@ class TypedEventRegistry {
   ///
   /// Returns information about the current state of the registry
   /// that can be useful for debugging or monitoring.
-  TypedEventRegistryStats getStats() {
-    return TypedEventRegistryStats(
-      totalRegisteredTypes: _factories.length,
-      registeredTypes: List.unmodifiable(_factories.keys),
-      registeredDartTypes: List.unmodifiable(_types.keys),
-    );
-  }
+  TypedEventRegistryStats getStats() => TypedEventRegistryStats(
+        totalRegisteredTypes: _factories.length,
+        registeredTypes: List.unmodifiable(_factories.keys),
+        registeredDartTypes: List.unmodifiable(_types.keys),
+      );
 
   /// Creates a copy of the current type mappings.
   ///
   /// This returns a snapshot of the current registry state.
   /// Useful for debugging or creating backups.
-  Map<String, Type> getTypeMappings() {
-    return Map.unmodifiable(_typeNames);
-  }
+  Map<String, Type> getTypeMappings() => Map.unmodifiable(_typeNames);
 
   @override
-  String toString() {
-    return 'TypedEventRegistry(registeredTypes: ${_factories.length})';
-  }
+  String toString() =>
+      'TypedEventRegistry(registeredTypes: ${_factories.length})';
 }
 
 /// Statistics about the typed event registry.
 class TypedEventRegistryStats {
+  const TypedEventRegistryStats({
+    required this.totalRegisteredTypes,
+    required this.registeredTypes,
+    required this.registeredDartTypes,
+  });
+
   /// Total number of registered types.
   final int totalRegisteredTypes;
 
@@ -308,24 +308,23 @@ class TypedEventRegistryStats {
   /// List of registered Dart types.
   final List<Type> registeredDartTypes;
 
-  const TypedEventRegistryStats({
-    required this.totalRegisteredTypes,
-    required this.registeredTypes,
-    required this.registeredDartTypes,
-  });
-
   @override
-  String toString() {
-    return 'TypedEventRegistryStats('
-        'totalRegisteredTypes: $totalRegisteredTypes, '
-        'registeredTypes: $registeredTypes, '
-        'registeredDartTypes: $registeredDartTypes'
-        ')';
-  }
+  String toString() => 'TypedEventRegistryStats('
+      'totalRegisteredTypes: $totalRegisteredTypes, '
+      'registeredTypes: $registeredTypes, '
+      'registeredDartTypes: $registeredDartTypes'
+      ')';
 }
 
 /// Exception thrown when typed event registry operations fail.
 class TypedEventRegistryException implements Exception {
+  const TypedEventRegistryException(
+    this.message, {
+    this.type,
+    this.cause,
+    this.stackTrace,
+  });
+
   /// The error message.
   final String message;
 
@@ -337,13 +336,6 @@ class TypedEventRegistryException implements Exception {
 
   /// Stack trace from the original error.
   final StackTrace? stackTrace;
-
-  const TypedEventRegistryException(
-    this.message, {
-    this.type,
-    this.cause,
-    this.stackTrace,
-  });
 
   @override
   String toString() {

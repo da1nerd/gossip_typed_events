@@ -105,9 +105,7 @@ abstract class TypedEvent {
   ///
   /// This is useful for debugging and logging purposes.
   @override
-  String toString() {
-    return '$runtimeType(type: $type, data: ${toJson()})';
-  }
+  String toString() => '$runtimeType(type: $type, data: ${toJson()})';
 
   /// Checks if two typed events are equal.
   ///
@@ -124,12 +122,10 @@ abstract class TypedEvent {
   }
 
   @override
-  int get hashCode {
-    return Object.hash(type, _deepHashCode(toJson()));
-  }
+  int get hashCode => Object.hash(type, _deepHashCode(toJson()));
 
   /// Deep equality check for maps and lists.
-  bool _deepEquals(dynamic a, dynamic b) {
+  bool _deepEquals(a, b) {
     if (identical(a, b)) return true;
     if (a.runtimeType != b.runtimeType) return false;
 
@@ -144,7 +140,7 @@ abstract class TypedEvent {
 
     if (a is List && b is List) {
       if (a.length != b.length) return false;
-      for (int i = 0; i < a.length; i++) {
+      for (var i = 0; i < a.length; i++) {
         if (!_deepEquals(a[i], b[i])) return false;
       }
       return true;
@@ -154,9 +150,9 @@ abstract class TypedEvent {
   }
 
   /// Deep hash code calculation for maps and lists.
-  int _deepHashCode(dynamic value) {
+  int _deepHashCode(value) {
     if (value is Map) {
-      int hash = 0;
+      var hash = 0;
       for (final entry in value.entries) {
         hash ^= Object.hash(entry.key, _deepHashCode(entry.value));
       }
@@ -164,8 +160,8 @@ abstract class TypedEvent {
     }
 
     if (value is List) {
-      int hash = 0;
-      for (int i = 0; i < value.length; i++) {
+      var hash = 0;
+      for (var i = 0; i < value.length; i++) {
         hash ^= Object.hash(i, _deepHashCode(value[i]));
       }
       return hash;

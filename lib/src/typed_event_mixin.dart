@@ -64,7 +64,7 @@ mixin TypedEventMixin on TypedEvent {
   /// Parameters:
   /// - [key]: The metadata key
   /// - [value]: The metadata value (must be JSON-serializable)
-  void setMetadata(String key, dynamic value) {
+  void setMetadata(String key, value) {
     _metadata[key] = value;
   }
 
@@ -79,9 +79,7 @@ mixin TypedEventMixin on TypedEvent {
   /// Removes a metadata key.
   ///
   /// Returns true if the key was present and removed, false otherwise.
-  bool removeMetadata(String key) {
-    return _metadata.remove(key) != null;
-  }
+  bool removeMetadata(String key) => _metadata.remove(key) != null;
 
   /// Validates the event data.
   ///
@@ -209,18 +207,16 @@ mixin TypedEventMixin on TypedEvent {
 
   /// Calculates a hash code that includes metadata.
   @override
-  int get hashCode {
-    return Object.hash(
-      super.hashCode,
-      createdAt.millisecondsSinceEpoch,
-      _deepHashCode(_metadata),
-    );
-  }
+  int get hashCode => Object.hash(
+        super.hashCode,
+        createdAt.millisecondsSinceEpoch,
+        _deepHashCode(_metadata),
+      );
 
   /// Deep hash code calculation for nested structures.
-  int _deepHashCode(dynamic value) {
+  int _deepHashCode(value) {
     if (value is Map) {
-      int hash = 0;
+      var hash = 0;
       for (final entry in value.entries) {
         hash ^= Object.hash(entry.key, _deepHashCode(entry.value));
       }
@@ -228,8 +224,8 @@ mixin TypedEventMixin on TypedEvent {
     }
 
     if (value is List) {
-      int hash = 0;
-      for (int i = 0; i < value.length; i++) {
+      var hash = 0;
+      for (var i = 0; i < value.length; i++) {
         hash ^= Object.hash(i, _deepHashCode(value[i]));
       }
       return hash;
@@ -250,7 +246,7 @@ mixin TypedEventMixin on TypedEvent {
   }
 
   /// Deep equality check for nested structures.
-  bool _deepEquals(dynamic a, dynamic b) {
+  bool _deepEquals(a, b) {
     if (identical(a, b)) return true;
     if (a.runtimeType != b.runtimeType) return false;
 
@@ -265,7 +261,7 @@ mixin TypedEventMixin on TypedEvent {
 
     if (a is List && b is List) {
       if (a.length != b.length) return false;
-      for (int i = 0; i < a.length; i++) {
+      for (var i = 0; i < a.length; i++) {
         if (!_deepEquals(a[i], b[i])) return false;
       }
       return true;

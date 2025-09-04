@@ -6,6 +6,7 @@ import 'package:test/test.dart';
 
 /// Mock transport for testing
 class MockTransport implements GossipTransport {
+  MockTransport(this.nodeId, this._network);
   final String nodeId;
   final Map<String, MockTransport> _network;
 
@@ -13,8 +14,6 @@ class MockTransport implements GossipTransport {
       StreamController<IncomingDigest>.broadcast();
   final StreamController<IncomingEvents> _eventsController =
       StreamController<IncomingEvents>.broadcast();
-
-  MockTransport(this.nodeId, this._network);
 
   @override
   Future<void> initialize() async {
@@ -78,45 +77,47 @@ class MockTransport implements GossipTransport {
   Stream<IncomingEvents> get incomingEvents => _eventsController.stream;
 
   @override
-  Future<List<GossipPeer>> discoverPeers() async {
-    return _network.keys
-        .where((id) => id != nodeId)
-        .map((id) => GossipPeer(id: id, address: 'mock://$id'))
-        .toList();
-  }
+  Future<List<GossipPeer>> discoverPeers() async => _network.keys
+      .where((id) => id != nodeId)
+      .map((id) => GossipPeer(id: id, address: 'mock://$id'))
+      .toList();
 
   @override
-  Future<bool> isPeerReachable(GossipPeer peer) async {
-    return _network.containsKey(peer.id);
-  }
+  Future<bool> isPeerReachable(GossipPeer peer) async =>
+      _network.containsKey(peer.id);
 }
 
 /// Test event implementations
 class TestUserEvent extends TypedEvent {
+  TestUserEvent({required this.userId, required this.action});
+
+  factory TestUserEvent.fromJson(Map<String, dynamic> json) => TestUserEvent(
+        userId: json['userId'] as String,
+        action: json['action'] as String,
+      );
   final String userId;
   final String action;
-
-  TestUserEvent({required this.userId, required this.action});
 
   @override
   String get type => 'test_user_event';
 
   @override
   Map<String, dynamic> toJson() => {'userId': userId, 'action': action};
-
-  factory TestUserEvent.fromJson(Map<String, dynamic> json) {
-    return TestUserEvent(
-      userId: json['userId'] as String,
-      action: json['action'] as String,
-    );
-  }
 }
 
 class TestOrderEvent extends TypedEvent with TypedEventMixin {
+  TestOrderEvent({required this.orderId, required this.amount});
+
+  factory TestOrderEvent.fromJson(Map<String, dynamic> json) {
+    final event = TestOrderEvent(
+      orderId: json['orderId'] as String,
+      amount: (json['amount'] as num).toDouble(),
+    );
+    event.fromJsonWithMetadata(json);
+    return event;
+  }
   final String orderId;
   final double amount;
-
-  TestOrderEvent({required this.orderId, required this.amount});
 
   @override
   String get type => 'test_order_event';
@@ -135,21 +136,14 @@ class TestOrderEvent extends TypedEvent with TypedEventMixin {
     json['amount'] = amount;
     return json;
   }
-
-  factory TestOrderEvent.fromJson(Map<String, dynamic> json) {
-    final event = TestOrderEvent(
-      orderId: json['orderId'] as String,
-      amount: (json['amount'] as num).toDouble(),
-    );
-    event.fromJsonWithMetadata(json);
-    return event;
-  }
 }
 
 class ValidatingEvent extends TypedEvent implements TypedEventValidatable {
-  final String data;
-
   ValidatingEvent({required this.data});
+
+  factory ValidatingEvent.fromJson(Map<String, dynamic> json) =>
+      ValidatingEvent(data: json['data'] as String);
+  final String data;
 
   @override
   String get type => 'validating_event';
@@ -163,10 +157,6 @@ class ValidatingEvent extends TypedEvent implements TypedEventValidatable {
 
   @override
   Map<String, dynamic> toJson() => {'data': data};
-
-  factory ValidatingEvent.fromJson(Map<String, dynamic> json) {
-    return ValidatingEvent(data: json['data'] as String);
-  }
 }
 
 void main() {
@@ -230,8 +220,9 @@ void main() {
       final createdAt = event.createdAt;
       final after = DateTime.now();
 
-      expect(createdAt.isAfter(before.subtract(Duration(seconds: 1))), isTrue);
-      expect(createdAt.isBefore(after.add(Duration(seconds: 1))), isTrue);
+      expect(createdAt.isAfter(before.subtract(const Duration(seconds: 1))),
+          isTrue);
+      expect(createdAt.isBefore(after.add(const Duration(seconds: 1))), isTrue);
     });
 
     test('should support metadata operations', () {
@@ -252,14 +243,14 @@ void main() {
     });
 
     test('should validate event data', () {
-      final validEvent = TestOrderEvent(orderId: 'order123', amount: 50.0);
-      expect(() => validEvent.validate(), returnsNormally);
+      final validEvent = TestOrderEvent(orderId: 'order123', amount: 50);
+      expect(validEvent.validate, returnsNormally);
 
-      final invalidOrder = TestOrderEvent(orderId: '', amount: 50.0);
-      expect(() => invalidOrder.validate(), throwsArgumentError);
+      final invalidOrder = TestOrderEvent(orderId: '', amount: 50);
+      expect(invalidOrder.validate, throwsArgumentError);
 
-      final invalidAmount = TestOrderEvent(orderId: 'order123', amount: -10.0);
-      expect(() => invalidAmount.validate(), throwsArgumentError);
+      final invalidAmount = TestOrderEvent(orderId: 'order123', amount: -10);
+      expect(invalidAmount.validate, throwsArgumentError);
     });
 
     test('should serialize with metadata', () {
@@ -288,8 +279,8 @@ void main() {
     });
 
     test('should handle complex nested data in equality', () {
-      final event1 = TestOrderEvent(orderId: 'order1', amount: 100.0);
-      final event2 = TestOrderEvent(orderId: 'order1', amount: 100.0);
+      final event1 = TestOrderEvent(orderId: 'order1', amount: 100);
+      final event2 = TestOrderEvent(orderId: 'order1', amount: 100);
 
       event1.setMetadata('complex', {
         'nested': {
@@ -321,7 +312,7 @@ void main() {
     test('should register and retrieve event types', () {
       registry.register<TestUserEvent>(
         'test_user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       expect(registry.isRegistered('test_user_event'), isTrue);
@@ -333,14 +324,14 @@ void main() {
     test('should create events from JSON', () {
       registry.register<TestUserEvent>(
         'test_user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       final json = {'userId': 'user789', 'action': 'signup'};
       final event = registry.createFromJson('test_user_event', json);
 
       expect(event, isA<TestUserEvent>());
-      expect((event as TestUserEvent).userId, equals('user789'));
+      expect((event! as TestUserEvent).userId, equals('user789'));
     });
 
     test('should return null for unregistered types', () {
@@ -351,7 +342,7 @@ void main() {
     test('should create strongly-typed events', () {
       registry.register<TestUserEvent>(
         'test_user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       final json = {'userId': 'user999', 'action': 'delete'};
@@ -374,13 +365,13 @@ void main() {
     test('should prevent duplicate registrations with different types', () {
       registry.register<TestUserEvent>(
         'duplicate_type',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       expect(
         () => registry.register<TestOrderEvent>(
           'duplicate_type',
-          (json) => TestOrderEvent.fromJson(json),
+          TestOrderEvent.fromJson,
         ),
         throwsArgumentError,
       );
@@ -389,14 +380,14 @@ void main() {
     test('should allow re-registration of same type', () {
       registry.register<TestUserEvent>(
         'test_type',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       // Should not throw
       expect(
         () => registry.register<TestUserEvent>(
           'test_type',
-          (json) => TestUserEvent.fromJson(json),
+          TestUserEvent.fromJson,
         ),
         returnsNormally,
       );
@@ -406,7 +397,7 @@ void main() {
       expect(
         () => registry.register<TestUserEvent>(
           '',
-          (json) => TestUserEvent.fromJson(json),
+          TestUserEvent.fromJson,
         ),
         throwsArgumentError,
       );
@@ -417,11 +408,11 @@ void main() {
     test('should provide registry statistics', () {
       registry.register<TestUserEvent>(
         'user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
       registry.register<TestOrderEvent>(
         'order_event',
-        (json) => TestOrderEvent.fromJson(json),
+        TestOrderEvent.fromJson,
       );
 
       final stats = registry.getStats();
@@ -433,7 +424,7 @@ void main() {
     test('should handle factory errors gracefully', () {
       registry.register<TestUserEvent>(
         'error_type',
-        (json) => throw FormatException('Invalid JSON'),
+        (json) => throw const FormatException('Invalid JSON'),
       );
 
       expect(
@@ -445,7 +436,7 @@ void main() {
     test('should support unregistration', () {
       registry.register<TestUserEvent>(
         'temp_type',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       expect(registry.isRegistered('temp_type'), isTrue);
@@ -472,15 +463,15 @@ void main() {
       // Register test events
       registry.register<TestUserEvent>(
         'test_user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
       registry.register<TestOrderEvent>(
         'test_order_event',
-        (json) => TestOrderEvent.fromJson(json),
+        TestOrderEvent.fromJson,
       );
       registry.register<ValidatingEvent>(
         'validating_event',
-        (json) => ValidatingEvent.fromJson(json),
+        ValidatingEvent.fromJson,
       );
 
       node = GossipNode(
@@ -536,7 +527,7 @@ void main() {
     test('should filter typed events by type', () async {
       final receivedEvents = <TestUserEvent>[];
       final subscription = node
-          .onTypedEvent<TestUserEvent>((json) => TestUserEvent.fromJson(json))
+          .onTypedEvent<TestUserEvent>(TestUserEvent.fromJson)
           .listen(receivedEvents.add);
 
       // Create a second node to send events to our test node
@@ -549,16 +540,17 @@ void main() {
 
       // Connect the nodes
       node.addPeer(
-          GossipPeer(id: 'sender-node', address: 'mock://sender-node'));
-      senderNode
-          .addPeer(GossipPeer(id: 'test-node', address: 'mock://test-node'));
+        const GossipPeer(id: 'sender-node', address: 'mock://sender-node'),
+      );
+      senderNode.addPeer(
+          const GossipPeer(id: 'test-node', address: 'mock://test-node'));
 
       // Broadcast different types of events from sender
       await senderNode.broadcastTypedEvent(
         TestUserEvent(userId: 'user1', action: 'login'),
       );
       await senderNode.broadcastTypedEvent(
-        TestOrderEvent(orderId: 'order1', amount: 100.0),
+        TestOrderEvent(orderId: 'order1', amount: 100),
       );
       await senderNode.broadcastTypedEvent(
         TestUserEvent(userId: 'user2', action: 'logout'),
@@ -566,7 +558,7 @@ void main() {
 
       // Trigger gossip to propagate events
       await senderNode.gossip();
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Should only receive user events
       expect(receivedEvents, hasLength(2));
@@ -593,9 +585,10 @@ void main() {
 
       // Connect the nodes
       node.addPeer(
-          GossipPeer(id: 'sender-node2', address: 'mock://sender-node2'));
-      senderNode
-          .addPeer(GossipPeer(id: 'test-node', address: 'mock://test-node'));
+        const GossipPeer(id: 'sender-node2', address: 'mock://sender-node2'),
+      );
+      senderNode.addPeer(
+          const GossipPeer(id: 'test-node', address: 'mock://test-node'));
 
       await senderNode.broadcastTypedEvent(
         TestOrderEvent(orderId: 'order123', amount: 99.99),
@@ -603,7 +596,7 @@ void main() {
 
       // Trigger gossip to propagate events
       await senderNode.gossip();
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       expect(receivedEvents, hasLength(1));
       expect(receivedEvents.first.orderId, equals('order123'));
@@ -635,20 +628,21 @@ void main() {
 
       // Connect the nodes
       node.addPeer(
-          GossipPeer(id: 'sender-node3', address: 'mock://sender-node3'));
-      senderNode
-          .addPeer(GossipPeer(id: 'test-node', address: 'mock://test-node'));
+        const GossipPeer(id: 'sender-node3', address: 'mock://sender-node3'),
+      );
+      senderNode.addPeer(
+          const GossipPeer(id: 'test-node', address: 'mock://test-node'));
 
       await senderNode.broadcastTypedEvent(
         TestUserEvent(userId: 'user1', action: 'login'),
       );
       await senderNode.broadcastTypedEvent(
-        TestOrderEvent(orderId: 'order1', amount: 50.0),
+        TestOrderEvent(orderId: 'order1', amount: 50),
       );
 
       // Trigger gossip to propagate events
       await senderNode.gossip();
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       expect(receivedEvents, hasLength(2));
       expect(receivedEvents[0].eventType, equals('test_user_event'));
@@ -681,9 +675,9 @@ void main() {
     });
 
     test('should transform events to typed events', () async {
-      final transformer = TypedEventTransformer<TestUserEvent>(
+      const transformer = TypedEventTransformer<TestUserEvent>(
         eventType: 'test_user_event',
-        factory: (json) => TestUserEvent.fromJson(json),
+        factory: TestUserEvent.fromJson,
       );
 
       final typedEventStream = eventController.stream.transform(transformer);
@@ -717,7 +711,7 @@ void main() {
       eventController.add(matchingEvent);
       eventController.add(nonMatchingEvent);
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(const Duration(milliseconds: 50));
 
       expect(receivedEvents, hasLength(1));
       expect(receivedEvents.first.userId, equals('user1'));
@@ -729,7 +723,7 @@ void main() {
       var errorCount = 0;
       final transformer = TypedEventTransformer<TestUserEvent>(
         eventType: 'test_user_event',
-        factory: (json) => throw FormatException('Bad data'),
+        factory: (json) => throw const FormatException('Bad data'),
         onError: (event, error, stackTrace) {
           errorCount++;
         },
@@ -751,7 +745,7 @@ void main() {
       );
 
       eventController.add(badEvent);
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(const Duration(milliseconds: 50));
 
       expect(receivedEvents, isEmpty);
       expect(errorCount, equals(1));
@@ -763,7 +757,7 @@ void main() {
       final registry = TypedEventRegistry();
       registry.register<TestUserEvent>(
         'test_user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       final transformer = RegistryTypedEventTransformer<TestUserEvent>(
@@ -786,7 +780,7 @@ void main() {
       );
 
       eventController.add(event);
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(const Duration(milliseconds: 50));
 
       expect(receivedEvents, hasLength(1));
       expect(receivedEvents.first.userId, equals('user123'));
@@ -799,11 +793,11 @@ void main() {
       final registry = TypedEventRegistry();
       registry.register<TestUserEvent>(
         'test_user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
       registry.register<TestOrderEvent>(
         'test_order_event',
-        (json) => TestOrderEvent.fromJson(json),
+        TestOrderEvent.fromJson,
       );
 
       final transformer = MultiTypeEventTransformer(
@@ -843,7 +837,7 @@ void main() {
 
       eventController.add(userEvent);
       eventController.add(orderEvent);
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(const Duration(milliseconds: 50));
 
       expect(receivedEvents, hasLength(2));
       expect(receivedEvents[0], isA<TestUserEvent>());
@@ -866,7 +860,7 @@ void main() {
 
       registry.register<TestUserEvent>(
         'test_user_event',
-        (json) => TestUserEvent.fromJson(json),
+        TestUserEvent.fromJson,
       );
 
       nodes = [
@@ -885,8 +879,8 @@ void main() {
       await Future.wait(nodes.map((node) => node.start()));
 
       // Connect nodes
-      nodes[0].addPeer(GossipPeer(id: 'node2', address: 'mock://node2'));
-      nodes[1].addPeer(GossipPeer(id: 'node1', address: 'mock://node1'));
+      nodes[0].addPeer(const GossipPeer(id: 'node2', address: 'mock://node2'));
+      nodes[1].addPeer(const GossipPeer(id: 'node1', address: 'mock://node1'));
     });
 
     tearDown(() async {
@@ -906,7 +900,7 @@ void main() {
 
       // Trigger gossip
       await nodes[0].gossip();
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Should receive on node 2
       expect(receivedEvents, hasLength(1));
@@ -920,7 +914,7 @@ void main() {
 
       registry.register<TestOrderEvent>(
         'test_order_event',
-        (json) => TestOrderEvent.fromJson(json),
+        TestOrderEvent.fromJson,
       );
 
       final subscription = nodes[1]
@@ -934,7 +928,7 @@ void main() {
 
       await nodes[0].broadcastTypedEvent(event);
       await nodes[0].gossip();
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       expect(receivedEvents, hasLength(1));
       final received = receivedEvents.first;

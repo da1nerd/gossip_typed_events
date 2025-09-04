@@ -209,5 +209,5 @@ library gossip_typed_events;
 export 'src/typed_event.dart';
 export 'src/typed_event_mixin.dart';
 export 'src/typed_event_registry.dart';
-export 'src/typed_gossip_node.dart';
 export 'src/typed_event_transformer.dart';
+export 'src/typed_gossip_node.dart';

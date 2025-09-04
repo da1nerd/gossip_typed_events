@@ -157,16 +157,15 @@ extension TypedGossipNode on GossipNode {
   /// ```
   Stream<T> onTypedEvent<T extends TypedEvent>(
     T Function(Map<String, dynamic>) fromJson,
-  ) {
-    return onEventReceived
-        .where((receivedEvent) => _isTypedEventOfType<T>(receivedEvent.event))
-        .map(
-          (receivedEvent) =>
-              _deserializeTypedEvent<T>(receivedEvent.event, fromJson),
-        )
-        .where((event) => event != null)
-        .cast<T>();
-  }
+  ) =>
+      onEventReceived
+          .where((receivedEvent) => _isTypedEventOfType<T>(receivedEvent.event))
+          .map(
+            (receivedEvent) =>
+                _deserializeTypedEvent<T>(receivedEvent.event, fromJson),
+          )
+          .where((event) => event != null)
+          .cast<T>();
 
   /// Stream of typed events of a specific type using the registry.
   ///
@@ -219,18 +218,16 @@ extension TypedGossipNode on GossipNode {
   ///   print('Received ${typedReceived.event.type} from ${typedReceived.fromPeer.id}');
   /// });
   /// ```
-  Stream<TypedReceivedEvent> onAnyTypedEvent() {
-    return onEventReceived
-        .where((receivedEvent) => _isTypedEvent(receivedEvent.event))
-        .map(
-          (receivedEvent) => TypedReceivedEvent(
-            event: _extractTypedEventInfo(receivedEvent.event),
-            fromPeer: receivedEvent.fromPeer,
-            receivedAt: receivedEvent.receivedAt,
-            underlyingEvent: receivedEvent.event,
-          ),
-        );
-  }
+  Stream<TypedReceivedEvent> onAnyTypedEvent() => onEventReceived
+      .where((receivedEvent) => _isTypedEvent(receivedEvent.event))
+      .map(
+        (receivedEvent) => TypedReceivedEvent(
+          event: _extractTypedEventInfo(receivedEvent.event),
+          fromPeer: receivedEvent.fromPeer,
+          receivedAt: receivedEvent.receivedAt,
+          underlyingEvent: receivedEvent.event,
+        ),
+      );
 
   /// Checks if an event is a typed event of the specified type.
   bool _isTypedEventOfType<T extends TypedEvent>(Event event) {
@@ -326,6 +323,12 @@ abstract class TypedEventValidatable {
 
 /// Information about a typed event without full deserialization.
 class TypedEventInfo {
+  const TypedEventInfo({
+    required this.type,
+    required this.data,
+    required this.version,
+  });
+
   /// The event type identifier.
   final String type;
 
@@ -335,20 +338,20 @@ class TypedEventInfo {
   /// The format version.
   final String version;
 
-  const TypedEventInfo({
-    required this.type,
-    required this.data,
-    required this.version,
-  });
-
   @override
-  String toString() {
-    return 'TypedEventInfo(type: $type, version: $version, data: $data)';
-  }
+  String toString() =>
+      'TypedEventInfo(type: $type, version: $version, data: $data)';
 }
 
 /// A typed event that was received from a peer.
 class TypedReceivedEvent {
+  const TypedReceivedEvent({
+    required this.event,
+    required this.fromPeer,
+    required this.receivedAt,
+    required this.underlyingEvent,
+  });
+
   /// The typed event information.
   final TypedEventInfo event;
 
@@ -361,13 +364,6 @@ class TypedReceivedEvent {
   /// The underlying gossip event.
   final Event underlyingEvent;
 
-  const TypedReceivedEvent({
-    required this.event,
-    required this.fromPeer,
-    required this.receivedAt,
-    required this.underlyingEvent,
-  });
-
   /// Convenience getter for the event type.
   String get eventType => event.type;
 
@@ -375,14 +371,20 @@ class TypedReceivedEvent {
   Map<String, dynamic> get eventData => event.data;
 
   @override
-  String toString() {
-    return 'TypedReceivedEvent(type: ${event.type}, fromPeer: ${fromPeer.id}, '
-        'receivedAt: $receivedAt, underlyingEventId: ${underlyingEvent.id})';
-  }
+  String toString() =>
+      'TypedReceivedEvent(type: ${event.type}, fromPeer: ${fromPeer.id}, '
+      'receivedAt: $receivedAt, underlyingEventId: ${underlyingEvent.id})';
 }
 
 /// Exception thrown when typed event operations fail.
 class TypedEventException implements Exception {
+  const TypedEventException(
+    this.message, {
+    this.eventType,
+    this.cause,
+    this.stackTrace,
+  });
+
   /// The error message.
   final String message;
 
@@ -394,13 +396,6 @@ class TypedEventException implements Exception {
 
   /// Stack trace from the original error.
   final StackTrace? stackTrace;
-
-  const TypedEventException(
-    this.message, {
-    this.eventType,
-    this.cause,
-    this.stackTrace,
-  });
 
   @override
   String toString() {

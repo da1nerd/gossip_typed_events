@@ -40,19 +40,6 @@ import 'typed_event_registry.dart';
 /// ```
 class TypedEventTransformer<T extends TypedEvent>
     extends StreamTransformerBase<Event, T> {
-  /// The event type to filter for.
-  final String eventType;
-
-  /// The factory function to create typed events from JSON.
-  final T Function(Map<String, dynamic>) factory;
-
-  /// Whether to skip events that fail to deserialize.
-  final bool skipErrors;
-
-  /// Optional error handler for deserialization failures.
-  final void Function(Event event, Object error, StackTrace stackTrace)?
-      onError;
-
   /// Creates a typed event transformer.
   ///
   /// Parameters:
@@ -67,14 +54,25 @@ class TypedEventTransformer<T extends TypedEvent>
     this.onError,
   });
 
+  /// The event type to filter for.
+  final String eventType;
+
+  /// The factory function to create typed events from JSON.
+  final T Function(Map<String, dynamic>) factory;
+
+  /// Whether to skip events that fail to deserialize.
+  final bool skipErrors;
+
+  /// Optional error handler for deserialization failures.
+  final void Function(Event event, Object error, StackTrace stackTrace)?
+      onError;
+
   @override
-  Stream<T> bind(Stream<Event> stream) {
-    return stream
-        .where((event) => _isTargetEventType(event))
-        .asyncMap((event) => _deserializeEvent(event))
-        .where((event) => event != null)
-        .cast<T>();
-  }
+  Stream<T> bind(Stream<Event> stream) => stream
+      .where(_isTargetEventType)
+      .asyncMap(_deserializeEvent)
+      .where((event) => event != null)
+      .cast<T>();
 
   /// Checks if an event is the target event type.
   bool _isTargetEventType(Event event) {
@@ -122,16 +120,6 @@ class TypedEventTransformer<T extends TypedEvent>
 /// ```
 class RegistryTypedEventTransformer<T extends TypedEvent>
     extends StreamTransformerBase<Event, T> {
-  /// Whether to skip events that fail to deserialize.
-  final bool skipErrors;
-
-  /// Optional error handler for deserialization failures.
-  final void Function(Event event, Object error, StackTrace stackTrace)?
-      onError;
-
-  /// The registry to use for deserialization.
-  final TypedEventRegistry? registry;
-
   /// Creates a registry-based typed event transformer.
   ///
   /// Parameters:
@@ -143,6 +131,16 @@ class RegistryTypedEventTransformer<T extends TypedEvent>
     this.onError,
     this.registry,
   });
+
+  /// Whether to skip events that fail to deserialize.
+  final bool skipErrors;
+
+  /// Optional error handler for deserialization failures.
+  final void Function(Event event, Object error, StackTrace stackTrace)?
+      onError;
+
+  /// The registry to use for deserialization.
+  final TypedEventRegistry? registry;
 
   @override
   Stream<T> bind(Stream<Event> stream) {
@@ -222,22 +220,6 @@ class RegistryTypedEventTransformer<T extends TypedEvent>
 /// ```
 class MultiTypeEventTransformer
     extends StreamTransformerBase<Event, TypedEvent> {
-  /// Whether to skip events that fail to deserialize.
-  final bool skipErrors;
-
-  /// Optional error handler for deserialization failures.
-  final void Function(Event event, Object error, StackTrace stackTrace)?
-      onError;
-
-  /// The registry to use for deserialization.
-  final TypedEventRegistry? registry;
-
-  /// Optional filter for event types to include.
-  final Set<String>? includeTypes;
-
-  /// Optional filter for event types to exclude.
-  final Set<String>? excludeTypes;
-
   /// Creates a multi-type event transformer.
   ///
   /// Parameters:
@@ -254,13 +236,29 @@ class MultiTypeEventTransformer
     this.excludeTypes,
   });
 
+  /// Whether to skip events that fail to deserialize.
+  final bool skipErrors;
+
+  /// Optional error handler for deserialization failures.
+  final void Function(Event event, Object error, StackTrace stackTrace)?
+      onError;
+
+  /// The registry to use for deserialization.
+  final TypedEventRegistry? registry;
+
+  /// Optional filter for event types to include.
+  final Set<String>? includeTypes;
+
+  /// Optional filter for event types to exclude.
+  final Set<String>? excludeTypes;
+
   @override
   Stream<TypedEvent> bind(Stream<Event> stream) {
     final reg = registry ?? TypedEventRegistry();
 
     return stream
-        .where((event) => _isTypedEvent(event))
-        .where((event) => _shouldIncludeEvent(event))
+        .where(_isTypedEvent)
+        .where(_shouldIncludeEvent)
         .asyncMap((event) => _deserializeEvent(event, reg))
         .where((event) => event != null)
         .cast<TypedEvent>();
@@ -345,14 +343,13 @@ TypedEventTransformer<T> typedEventTransformer<T extends TypedEvent>({
   required T Function(Map<String, dynamic>) factory,
   bool skipErrors = true,
   void Function(Event event, Object error, StackTrace stackTrace)? onError,
-}) {
-  return TypedEventTransformer<T>(
-    eventType: eventType,
-    factory: factory,
-    skipErrors: skipErrors,
-    onError: onError,
-  );
-}
+}) =>
+    TypedEventTransformer<T>(
+      eventType: eventType,
+      factory: factory,
+      skipErrors: skipErrors,
+      onError: onError,
+    );
 
 /// Helper function to create a registry-based typed event transformer.
 ///
@@ -372,13 +369,12 @@ RegistryTypedEventTransformer<T>
   bool skipErrors = true,
   void Function(Event event, Object error, StackTrace stackTrace)? onError,
   TypedEventRegistry? registry,
-}) {
-  return RegistryTypedEventTransformer<T>(
-    skipErrors: skipErrors,
-    onError: onError,
-    registry: registry,
-  );
-}
+}) =>
+        RegistryTypedEventTransformer<T>(
+          skipErrors: skipErrors,
+          onError: onError,
+          registry: registry,
+        );
 
 /// Helper function to create a multi-type event transformer.
 ///
@@ -403,18 +399,25 @@ MultiTypeEventTransformer multiTypeEventTransformer({
   TypedEventRegistry? registry,
   Set<String>? includeTypes,
   Set<String>? excludeTypes,
-}) {
-  return MultiTypeEventTransformer(
-    skipErrors: skipErrors,
-    onError: onError,
-    registry: registry,
-    includeTypes: includeTypes,
-    excludeTypes: excludeTypes,
-  );
-}
+}) =>
+    MultiTypeEventTransformer(
+      skipErrors: skipErrors,
+      onError: onError,
+      registry: registry,
+      includeTypes: includeTypes,
+      excludeTypes: excludeTypes,
+    );
 
 /// Exception thrown when typed event transformer operations fail.
 class TypedEventTransformerException implements Exception {
+  const TypedEventTransformerException(
+    this.message, {
+    this.eventType,
+    this.dartType,
+    this.cause,
+    this.stackTrace,
+  });
+
   /// The error message.
   final String message;
 
@@ -429,14 +432,6 @@ class TypedEventTransformerException implements Exception {
 
   /// Stack trace from the original error.
   final StackTrace? stackTrace;
-
-  const TypedEventTransformerException(
-    this.message, {
-    this.eventType,
-    this.dartType,
-    this.cause,
-    this.stackTrace,
-  });
 
   @override
   String toString() {
