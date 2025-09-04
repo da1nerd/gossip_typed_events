@@ -112,8 +112,7 @@ class TestOrderEvent extends TypedEvent with TypedEventMixin {
     final event = TestOrderEvent(
       orderId: json['orderId'] as String,
       amount: (json['amount'] as num).toDouble(),
-    );
-    event.fromJsonWithMetadata(json);
+    )..fromJsonWithMetadata(json);
     return event;
   }
   final String orderId;
@@ -220,16 +219,19 @@ void main() {
       final createdAt = event.createdAt;
       final after = DateTime.now();
 
-      expect(createdAt.isAfter(before.subtract(const Duration(seconds: 1))),
-          isTrue);
+      expect(
+        createdAt.isAfter(before.subtract(const Duration(seconds: 1))),
+        isTrue,
+      );
       expect(createdAt.isBefore(after.add(const Duration(seconds: 1))), isTrue);
     });
 
     test('should support metadata operations', () {
       expect(event.metadata, isEmpty);
 
-      event.setMetadata('source', 'mobile');
-      event.setMetadata('version', '1.0.0');
+      event
+        ..setMetadata('source', 'mobile')
+        ..setMetadata('version', '1.0.0');
 
       expect(event.getMetadata<String>('source'), equals('mobile'));
       expect(event.getMetadata<String>('version'), equals('1.0.0'));
@@ -301,8 +303,7 @@ void main() {
     late TypedEventRegistry registry;
 
     setUp(() {
-      registry = TypedEventRegistry();
-      registry.clear(); // Start with clean registry
+      registry = TypedEventRegistry()..clear(); // Start with clean registry
     });
 
     tearDown(() {
@@ -406,14 +407,15 @@ void main() {
     });
 
     test('should provide registry statistics', () {
-      registry.register<TestUserEvent>(
-        'user_event',
-        TestUserEvent.fromJson,
-      );
-      registry.register<TestOrderEvent>(
-        'order_event',
-        TestOrderEvent.fromJson,
-      );
+      registry
+        ..register<TestUserEvent>(
+          'user_event',
+          TestUserEvent.fromJson,
+        )
+        ..register<TestOrderEvent>(
+          'order_event',
+          TestOrderEvent.fromJson,
+        );
 
       final stats = registry.getStats();
       expect(stats.totalRegisteredTypes, equals(2));
@@ -433,7 +435,7 @@ void main() {
       );
     });
 
-    test('should support unregistration', () {
+    test('should support un-registration', () {
       registry.register<TestUserEvent>(
         'temp_type',
         TestUserEvent.fromJson,
@@ -457,22 +459,22 @@ void main() {
 
     setUp(() async {
       network = <String, MockTransport>{};
-      registry = TypedEventRegistry();
-      registry.clear();
+      registry = TypedEventRegistry()
+        ..clear()
 
-      // Register test events
-      registry.register<TestUserEvent>(
-        'test_user_event',
-        TestUserEvent.fromJson,
-      );
-      registry.register<TestOrderEvent>(
-        'test_order_event',
-        TestOrderEvent.fromJson,
-      );
-      registry.register<ValidatingEvent>(
-        'validating_event',
-        ValidatingEvent.fromJson,
-      );
+        // Register test events
+        ..register<TestUserEvent>(
+          'test_user_event',
+          TestUserEvent.fromJson,
+        )
+        ..register<TestOrderEvent>(
+          'test_order_event',
+          TestOrderEvent.fromJson,
+        )
+        ..register<ValidatingEvent>(
+          'validating_event',
+          ValidatingEvent.fromJson,
+        );
 
       node = GossipNode(
         config: GossipConfig(nodeId: 'test-node'),
@@ -543,7 +545,8 @@ void main() {
         const GossipPeer(id: 'sender-node', address: 'mock://sender-node'),
       );
       senderNode.addPeer(
-          const GossipPeer(id: 'test-node', address: 'mock://test-node'));
+        const GossipPeer(id: 'test-node', address: 'mock://test-node'),
+      );
 
       // Broadcast different types of events from sender
       await senderNode.broadcastTypedEvent(
@@ -588,7 +591,8 @@ void main() {
         const GossipPeer(id: 'sender-node2', address: 'mock://sender-node2'),
       );
       senderNode.addPeer(
-          const GossipPeer(id: 'test-node', address: 'mock://test-node'));
+        const GossipPeer(id: 'test-node', address: 'mock://test-node'),
+      );
 
       await senderNode.broadcastTypedEvent(
         TestOrderEvent(orderId: 'order123', amount: 99.99),
@@ -631,7 +635,8 @@ void main() {
         const GossipPeer(id: 'sender-node3', address: 'mock://sender-node3'),
       );
       senderNode.addPeer(
-          const GossipPeer(id: 'test-node', address: 'mock://test-node'));
+        const GossipPeer(id: 'test-node', address: 'mock://test-node'),
+      );
 
       await senderNode.broadcastTypedEvent(
         TestUserEvent(userId: 'user1', action: 'login'),
@@ -708,8 +713,9 @@ void main() {
         },
       );
 
-      eventController.add(matchingEvent);
-      eventController.add(nonMatchingEvent);
+      eventController
+        ..add(matchingEvent)
+        ..add(nonMatchingEvent);
 
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -754,11 +760,11 @@ void main() {
     });
 
     test('should use registry for transformation', () async {
-      final registry = TypedEventRegistry();
-      registry.register<TestUserEvent>(
-        'test_user_event',
-        TestUserEvent.fromJson,
-      );
+      final registry = TypedEventRegistry()
+        ..register<TestUserEvent>(
+          'test_user_event',
+          TestUserEvent.fromJson,
+        );
 
       final transformer = RegistryTypedEventTransformer<TestUserEvent>(
         registry: registry,
@@ -790,15 +796,15 @@ void main() {
     });
 
     test('should handle multiple event types', () async {
-      final registry = TypedEventRegistry();
-      registry.register<TestUserEvent>(
-        'test_user_event',
-        TestUserEvent.fromJson,
-      );
-      registry.register<TestOrderEvent>(
-        'test_order_event',
-        TestOrderEvent.fromJson,
-      );
+      final registry = TypedEventRegistry()
+        ..register<TestUserEvent>(
+          'test_user_event',
+          TestUserEvent.fromJson,
+        )
+        ..register<TestOrderEvent>(
+          'test_order_event',
+          TestOrderEvent.fromJson,
+        );
 
       final transformer = MultiTypeEventTransformer(
         registry: registry,
@@ -835,8 +841,9 @@ void main() {
         },
       );
 
-      eventController.add(userEvent);
-      eventController.add(orderEvent);
+      eventController
+        ..add(userEvent)
+        ..add(orderEvent);
       await Future.delayed(const Duration(milliseconds: 50));
 
       expect(receivedEvents, hasLength(2));
@@ -855,13 +862,12 @@ void main() {
 
     setUp(() async {
       network = <String, MockTransport>{};
-      registry = TypedEventRegistry();
-      registry.clear();
-
-      registry.register<TestUserEvent>(
-        'test_user_event',
-        TestUserEvent.fromJson,
-      );
+      registry = TypedEventRegistry()
+        ..clear()
+        ..register<TestUserEvent>(
+          'test_user_event',
+          TestUserEvent.fromJson,
+        );
 
       nodes = [
         GossipNode(
@@ -922,9 +928,9 @@ void main() {
           .listen(receivedEvents.add);
 
       // Create event with metadata
-      final event = TestOrderEvent(orderId: 'meta_order', amount: 199.99);
-      event.setMetadata('source', 'integration_test');
-      event.setMetadata('priority', 'high');
+      final event = TestOrderEvent(orderId: 'meta_order', amount: 199.99)
+        ..setMetadata('source', 'integration_test')
+        ..setMetadata('priority', 'high');
 
       await nodes[0].broadcastTypedEvent(event);
       await nodes[0].gossip();

@@ -188,9 +188,9 @@ mixin TypedEventMixin on TypedEvent {
   /// Returns a detailed string representation including metadata.
   @override
   String toString() {
-    final buffer = StringBuffer('$runtimeType(');
-    buffer.write('type: $type');
-    buffer.write(', createdAt: $createdAt');
+    final buffer = StringBuffer('$runtimeType(')
+      ..write('type: $type')
+      ..write(', createdAt: $createdAt');
 
     if (_metadata.isNotEmpty) {
       buffer.write(', metadata: $_metadata');
