@@ -34,7 +34,7 @@ import 'typed_event_registry.dart';
 ///
 /// // Create typed events
 /// final loginEvent = UserLoginEvent(userId: '123');
-/// await node.broadcastTypedEvent(loginEvent);
+/// await node.createTypedEvent(loginEvent);
 ///
 /// // Listen for typed events
 /// node.onTypedEvent<UserLoginEvent>((json) => UserLoginEvent.fromJson(json))
@@ -43,7 +43,7 @@ import 'typed_event_registry.dart';
 /// });
 /// ```
 extension TypedGossipNode on GossipNode {
-  /// Broadcasts a typed event to all peers.
+  /// Creates a typed event.
   ///
   /// The typed event is automatically serialized and wrapped in the
   /// standard event payload format expected by the gossip protocol.
@@ -58,7 +58,7 @@ extension TypedGossipNode on GossipNode {
   /// Parameters:
   /// - [event]: The typed event to broadcast
   ///
-  /// Returns the underlying Event that was created and broadcast.
+  /// Returns the underlying Event that was created.
   ///
   /// Throws:
   /// - [ArgumentError] if the event is invalid
@@ -73,10 +73,10 @@ extension TypedGossipNode on GossipNode {
   ///   amount: 99.99,
   /// );
   ///
-  /// final gossipEvent = await node.broadcastTypedEvent(orderEvent);
-  /// print('Broadcast event with ID: ${gossipEvent.id}');
+  /// final gossipEvent = await node.createTypedEvent(orderEvent);
+  /// print('Created event with ID: ${gossipEvent.id}');
   /// ```
-  Future<Event> broadcastTypedEvent<T extends TypedEvent>(T event) async {
+  Future<Event> createTypedEvent<T extends TypedEvent>(T event) async {
     try {
       // Validate the event if it supports validation
       if (event is TypedEventValidatable) {
@@ -92,45 +92,12 @@ extension TypedGossipNode on GossipNode {
       return await createEvent(payload);
     } catch (e, stackTrace) {
       throw TypedEventException(
-        'Failed to broadcast typed event of type "${event.type}": $e',
+        'Failed to create typed event of type "${event.type}": $e',
         eventType: event.type,
         cause: e,
         stackTrace: stackTrace,
       );
     }
-  }
-
-  /// Creates and broadcasts multiple typed events efficiently.
-  ///
-  /// This method creates multiple events in sequence, which can be more
-  /// efficient than calling [broadcastTypedEvent] multiple times when
-  /// you have a batch of events to send.
-  ///
-  /// Parameters:
-  /// - [events]: The typed events to broadcast
-  ///
-  /// Returns a list of the underlying Events that were created.
-  ///
-  /// Example:
-  /// ```dart
-  /// final events = [
-  ///   UserLoginEvent(userId: '123'),
-  ///   UserActionEvent(userId: '123', action: 'view_profile'),
-  ///   UserLogoutEvent(userId: '123'),
-  /// ];
-  ///
-  /// final gossipEvents = await node.broadcastTypedEvents(events);
-  /// print('Broadcast ${gossipEvents.length} events');
-  /// ```
-  Future<List<Event>> broadcastTypedEvents(List<TypedEvent> events) async {
-    final results = <Event>[];
-
-    for (final event in events) {
-      final gossipEvent = await broadcastTypedEvent(event);
-      results.add(gossipEvent);
-    }
-
-    return results;
   }
 
   /// Stream of typed events of a specific type.
